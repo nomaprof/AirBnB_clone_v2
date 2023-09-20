@@ -7,6 +7,7 @@ The console is the first segment of the AirBnB project at Alx SE that will colle
 * Do operations on objects (count, compute stats, etc...)
 * Update attributes of an object
 * Destroy an object
+* Make project more interactive
 
 ## Table of Content
 * [Environment](#environment)
