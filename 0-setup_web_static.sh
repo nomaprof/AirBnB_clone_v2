@@ -1,39 +1,45 @@
 #!/usr/bin/env bash
-# Sets up the web servers for the deployment of web_static
+# This bash script sets a webserver to answer requestes for static webpages
 
-# Update package lists
+# The first step is to update the packages already on the webserver
 apt update
 
-# Install Nginx
+# The second step is to install Nginx
 apt install -y nginx
+sudo ufw allow 'Nginx HTTP'
 
-# - Create the folders, if they don't yet exist:
+# The third step is to create the folders below if they do not exist
 #   * '/data'
 #   * '/data/web_static/'
 #   * '/data/web_static/releases/'
 #   * '/data/web_static/releases/test/'
 #   * '/data/web_static/shared/'
-mkdir -p /data/web_static/releases/test/
-mkdir -p /data/web_static/shared/
+sudo mkdir -p /data/
+sudo mkdir -p /data/web_static/
+sudo mkdir -p /data/web_static/releases/
+sudo mkdir -p /data/web_static/shared/
+sudo mkdir -p /data/web_static/releases/test/
 
-# Create a fake HTML file '/data/web_static/releases/test/index.html',
-# (with simple content, to test Nginx configuration)
-printf "<html>\n\t<head>\n\t</head>\n\t<body>\n\t\tHolberton School\n\t</body>\n</html>\n" | 
-tee /data/web_static/releases/test/index.html 
+# The fourth step is to create a fake index HTML file saved as '/data/web_static/releases/test/index.html'
+sudo touch /data/web_static/releases/test/index.html
+sudo echo "<html>
+  <head>
+  </head>
+  <body>
+    Holberton School
+  </body>
+</html>" | sudo tee /data/web_static/releases/test/index.html 
 
-# Create a symbolic link '/data/web_static/current' linked to the
-# '/data/web_static/releases/test/' folder.
+# The fifth step is to create a symbolic link for '/data/web_static/current' and
+# '/data/web_static/releases/test/'
 ln -fs /data/web_static/releases/test/ /data/web_static/current
 
-# Give recursive ownership of the '/data/' folder to the 'ubuntu' user AND group
+# The sixth step is to give recursive ownership of '/data/' folder to ubuntu and GROUP
 chown -R ubuntu:ubuntu /data/
 
-# Update the Nginx configuration to serve the content of '/data/web_static/current/'
-# to 'hbnb_static' (ex: https://mydomainname.tech/hbnb_static).
-loc_header="location \/hbnb\_static\/ {"
-loc_content="alias \/data\/web\_static\/current\/;"
-new_location="\n\t$loc_header\n\t\t$loc_content\n\t}\n"
-sed -i "37s/$/$new_location/" /etc/nginx/sites-available/default
+# The seventh step is to update the configuration of Nginx to serve static web pages from '/data/web_static/current/'
+# to 'hbnb_static' (ex: https://nomaetinosa.tech/hbnb_static)
+sudo sed -i '/listen 80 default_server/a location /hbnb_static { alias /data/web_static/current/;}' /etc/nginx/sites-enabled/default
 
-# Restart Nginx
+# The eighth stop is to Restart Nginx
 service nginx restart

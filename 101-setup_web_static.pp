@@ -1,17 +1,17 @@
 include stdlib
 
-# Update package lists
+# Update the packages on the computer
 exec { 'Update lists':
     command => '/usr/bin/apt update'
 }
 
-# Install Nginx
+# Install Nginx on the webserver
 package { 'nginx':
     ensure  => 'present',
     require => Exec['Update lists']
 }
 
-# Create the directory tree
+# Create the necessary directory tree as requested
 exec { 'Create Directory Tree':
     command => '/bin/mkdir -p /data/web_static/releases/test /data/web_static/shared',
     require => Package['nginx']
@@ -21,8 +21,8 @@ $head = "  <head>\n  </head>"
 $body = "  <body>\n    Holberton School\n  </body>"
 $index = "<html>\n${head}\n${body}\n</html>\n"
 
-# Create a fake HTML file with simple content,
-# to test Nginx configuration
+# Make the fake HTML file
+# to confirm Nginx is working the way it supposed to work
 file { 'Create Fake HTML':
     ensure  => 'present',
     path    => '/data/web_static/releases/test/index.html',
@@ -30,8 +30,7 @@ file { 'Create Fake HTML':
     require => Exec['Create Directory Tree']
 }
 
-# Create a symbolic link '/data/web_static/current' linked to the
-# '/data/web_static/releases/test/' folder.
+# Make a symbolic link between /current and /test
 file { 'Create Symbolic Link':
     ensure  => 'link',
     path    => '/data/web_static/current',
@@ -40,25 +39,25 @@ file { 'Create Symbolic Link':
     require => File['Create Fake HTML']
 }
 
-# Ensures that Nginx is running
+# Check agian to make sure that Nginx is running
 service { 'nginx':
     ensure  => 'running',
     enable  => true,
     require => Package['nginx']
 }
 
-# Set permissions for 'ubuntu' user
+# Give permission to users as desired
 exec { 'Set permissions':
     command => '/bin/chown -R ubuntu:ubuntu /data',
     require => File['Create Symbolic Link']
 }
 
-# Set a new location for a Nginx VHost 
+# Set where the webpage can be found on the webserver 
 $loc_header='location /hbnb_static/ {'
 $loc_content='alias /data/web_static/current/;'
 $new_location="\n\t${loc_header}\n\t\t${loc_content}\n\t}\n"
 
-# Write the new location to the default Nginx VHost
+# Ensure that Nginx also serves the webpage when requested
 file_line { 'Set Nginx Location':
     ensure  => 'present',
     path    => '/etc/nginx/sites-available/default',

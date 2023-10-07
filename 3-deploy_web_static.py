@@ -1,54 +1,75 @@
 #!/usr/bin/python3
+import os.path
+from fabric.api import put
 from datetime import datetime
-from fabric.api import *
-from os import path
+from fabric.api import env
+from fabric.api import local
+from fabric.api import run
+
+env.hosts = ['100.25.202.252', '35.175.63.185']
 
 
-env.hosts = ['3.90.70.127', '18.207.233.106']
-
-
-@runs_once
 def do_pack():
-    """Generates a .tgz archive from the contents
-    of the web_static folder of this repository.
-    """
-
-    d = datetime.now()
-    now = d.strftime('%Y%m%d%H%M%S')
-    path = "versions/web_static_{}.tgz".format(now)
-
-    local("mkdir -p versions")
-    local("tar -czvf {} web_static".format(path))
-    return path
+    """This function is used to compress the webstatic folder"""
+    dt = datetime.utcnow()
+    file = "versions/web_static_{}{}{}{}{}{}.tgz".format(dt.year,
+                                                         dt.month,
+                                                         dt.day,
+                                                         dt.hour,
+                                                         dt.minute,
+                                                         dt.second)
+    if os.path.isdir("versions") is False:
+        if local("mkdir -p versions").failed is True:
+            return None
+    if local("tar -cvzf {} web_static".format(file)).failed is True:
+        return None
+    return file
 
 
 def do_deploy(archive_path):
-    """Distributes a .tgz archive through web servers
+    """Send archive to webserver for deployment.
+
+    Args:
+        archive_path (str): The path to where the archive can be found
+    Returns:
+        False, if the archive does not exist in the path
+        Otherwise - Return, True
     """
+    if os.path.isfile(archive_path) is False:
+        return False
+    file = archive_path.split("/")[-1]
+    name = file.split(".")[0]
 
-    if path.exists(archive_path):
-        archive = archive_path.split('/')[1]
-        a_path = "/tmp/{}".format(archive)
-        folder = archive.split('.')[0]
-        f_path = "/data/web_static/releases/{}/".format(folder)
-
-        put(archive_path, a_path)
-        run("mkdir -p {}".format(f_path))
-        run("tar -xzf {} -C {}".format(a_path, f_path))
-        run("rm {}".format(a_path))
-        run("mv -f {}web_static/* {}".format(f_path, f_path))
-        run("rm -rf {}web_static".format(f_path))
-        run("rm -rf /data/web_static/current")
-        run("ln -s {} /data/web_static/current".format(f_path))
-
-        return True
-
-    return False
+    if put(archive_path, "/tmp/{}".format(file)).failed is True:
+        return False
+    if run("rm -rf /data/web_static/releases/{}/".
+           format(name)).failed is True:
+        return False
+    if run("mkdir -p /data/web_static/releases/{}/".
+           format(name)).failed is True:
+        return False
+    if run("tar -xzf /tmp/{} -C /data/web_static/releases/{}/".
+           format(file, name)).failed is True:
+        return False
+    if run("rm /tmp/{}".format(file)).failed is True:
+        return False
+    if run("mv /data/web_static/releases/{}/web_static/* "
+           "/data/web_static/releases/{}/".format(name, name)).failed is True:
+        return False
+    if run("rm -rf /data/web_static/releases/{}/web_static".
+           format(name)).failed is True:
+        return False
+    if run("rm -rf /data/web_static/current").failed is True:
+        return False
+    if run("ln -s /data/web_static/releases/{}/ /data/web_static/current".
+           format(name)).failed is True:
+        return False
+    return True
 
 
 def deploy():
-    """Creates and Distributes a .tgz archive through web servers
-    """
-
-    archive = do_pack()
-    return do_deploy(archive)
+    """This function helps to create and distribute the archive file to a web server."""
+    file = do_pack()
+    if file is None:
+        return False
+    return do_deploy(file)
