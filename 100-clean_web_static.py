@@ -6,6 +6,8 @@ Created on Sat Oct 08 14:21:54 2023
 """
 from fabric.api import local, put, run, env, cd, lcd
 from datetime import datetime
+import os
+
 
 env.hosts = ['100.25.202.252', '35.175.63.185']
 env.user = 'ubuntu'
@@ -75,20 +77,17 @@ def gets_out_of_date(number, _type):
 
 
 def do_clean(number=0):
-    """This function deletes old versions of files in webserver
+    """This function helps to delete older versions of files
     """
+    number = 1 if int(number) == 0 else int(number)
 
-    number = int(number)
+    archives = sorted(os.listdir("versions"))
+    [archives.pop() for i in range(number)]
+    with lcd("versions"):
+        [local("rm ./{}".format(a)) for a in archives]
 
-    if number >= 0:
-        with lcd("versions"):
-            _files = gets_out_of_date(number, 'local')
-
-            for _file in _files:
-                local("rm -f {file}".format(file=_file))
-
-        with cd("/data/web_static/releases"):
-            _folders = gets_out_of_date(number, 'remote')
-
-            for _folder in _folders:
-                run("rm -rf {folder}".format(folder=_folder))
+    with cd("/data/web_static/releases"):
+        archives = run("ls -tr").split()
+        archives = [a for a in archives if "web_static_" in a]
+        [archives.pop() for i in range(number)]
+        [run("rm -rf ./{}".format(a)) for a in archives]
